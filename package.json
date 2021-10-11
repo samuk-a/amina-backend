@@ -1,0 +1,27 @@
+{
+  "name": "amina_backend",
+  "version": "1.0.0",
+  "description": "API de consumo da aplicação de animes e mangás",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/samuk-a/amina-backend.git"
+  },
+  "keywords": [
+    "amina",
+    "anime",
+    "mangá"
+  ],
+  "author": "Samuel Santiago",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/samuk-a/amina-backend/issues"
+  },
+  "homepage": "https://github.com/samuk-a/amina-backend#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
