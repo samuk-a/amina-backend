@@ -4,6 +4,8 @@
   "description": "API de consumo da aplicação de animes e mangás",
   "main": "index.js",
   "scripts": {
+    "start": "node .",
+    "dev": "cls && nodemon .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,6 +24,11 @@
   },
   "homepage": "https://github.com/samuk-a/amina-backend#readme",
   "dependencies": {
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "mongoose": "^6.0.10",
+    "slugify": "^1.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.13"
   }
 }
