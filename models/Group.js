@@ -5,17 +5,18 @@ const schema = new mongoose.Schema({
 		type: String,
 		required: true
 	},
-	email: {
-		type: String,
-		required: true,
-		unique: true
+	permissions: {
+		type: Object,
+		default: {
+			general: ["noAds"],
+			anime: ["list", "viewDetails", "addToList"],
+			episode: ["list", "watch"],
+			personal: ["view", "edit"]
+		}
 	},
-	password: {
+	slug: {
 		type: String,
-		required: true
-	},
-	group: {
-		type: String,
+		unique: true,
 		required: true
 	},
 	createdAt: {
@@ -28,4 +29,4 @@ const schema = new mongoose.Schema({
 	}
 })
 
-module.exports = mongoose.model('User', schema)
+module.exports = mongoose.model('Group', schema)

@@ -1,0 +1,75 @@
+const express = require('express')
+{{#if hasSlug}}
+const slugify = require('slugify')
+{{/if}}
+const {{modelName}} = require('../models/{{modelName}}')
+const router = express.Router()
+
+router.get('/', (req, res) => {
+	{{modelName}}.find().then(result => {
+		res.json(result)
+	}).catch(err => {
+		res.status(500).json({ err, msg: "Ocorreu um erro ao listar {{toLowerCase modelNameLocale}}s" })
+	})
+})
+
+{{#if hasSlug}}
+router.get('/:slug', (req, res) => {
+	const slug = req.params.slug
+	{{modelName}}.findOne({ slug }).then(result => {
+		if (!result)
+			return res.status(404).json({ msg: "{{modelNameLocale}} não encontrado" })
+		res.json(result)
+	}).catch(err => {
+		res.status(500).json({ err, msg: "Ocorreu um erro ao resgatar o {{toLowerCase modelNameLocale}}" })
+	})
+})
+
+{{/if}}
+router.post('/', (req, res) => {
+	const obj = req.body
+	{{#if hasSlug}}
+	obj.slug = slugify(obj.name, {
+		strict: true,
+		lower: true
+	})
+	{{/if}}
+	const {{toLowerCase modelName}} = new {{modelName}}(obj)
+	{{toLowerCase modelName}}.save().then(result => {
+		res.json({ result, msg: "{{modelNameLocale}} salvo com sucesso!" })
+	}).catch(err => {
+		res.status(500).json({ err, msg: "Ocorreu um erro ao salvar o {{toLowerCase modelNameLocale}}" })
+	})
+})
+
+router.delete('/:id', (req, res) => {
+	const id = req.params.id
+	{{modelName}}.findOneAndDelete({ _id: id }).then(result => {
+		if (!result)
+			return res.status(404).json({ msg: "{{modelNameLocale}} não encontrado" })
+		res.json({ result, msg: "{{modelNameLocale}} deletado com sucesso!" })
+	}).catch(err => {
+		res.status(500).json({ err, msg: "Ocorreu um erro ao deletar o {{toLowerCase modelNameLocale}}" })
+	})
+})
+
+router.patch('/:id', (req, res) => {
+	const _id = req.params.id
+	{{#if hasSlug}}
+	if (!req.body.slug && req.body.name)
+		req.body.slug = slugify(req.body.name, {
+			strict: true,
+			lower: true
+		})
+	{{/if}}
+	req.body.updatedAt = Date.now()
+	{{modelName}}.findOneAndUpdate({ _id }, req.body).then(result => {
+		if (!result)
+			return res.status(404).json({ msg: "{{modelNameLocale}} não encontrado" })
+		res.json({ result, msg: "{{modelNameLocale}} editado com sucesso!" })
+	}).catch(err => {
+		res.status(500).json({ err, msg: "Ocorreu um erro ao editar o {{toLowerCase modelNameLocale}}" })
+	})
+})
+
+module.exports = router
