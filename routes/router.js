@@ -10,7 +10,7 @@ const listsRouter = require('./lists.router')
 const User = require('../models/User')
 const List = require('../models/List')
 const Auth = require('../middlewares/Auth')
-const { UnauthorizedError } = require('../errors/api')
+const { UnauthorizedError, UnhandledError, BadRequestError } = require('../errors/api')
 
 const router = express.Router()
 
@@ -35,33 +35,34 @@ router.post('/login', async (req, res, next) => {
 	}
 })
 
-router.post('/signup', (req, res) => {
+router.post('/signup', async (req, res, next) => {
 	const userObj = req.body
 	const salt = bcrypt.genSaltSync(10)
-	userObj.password = bcrypt.hashSync(userObj.password, salt)
-	const list = new List()
+	userObj.password = await bcrypt.hash(userObj.password, salt)
 
-	list.save().then(list => {
+	try {
+		let list = new List()
+		list = await list.save()
 		userObj.list = list._id
-	}).then(() => {
-		const user = new User(userObj)
+	} catch (error) {
+		error = new UnhandledError("Ocorreu um erro ao se cadastrar")
+		return next(error)
+	}
 
-		user.save().then(user => {
-			const token = jwt.sign({ data: { id: user.id, name: user.name, email, group: user.group, list: user.list } }, process.env.SECRET, { expiresIn: '48h' })
-			console.log(token)
-			return res.json({ msg: "Cadastro realizado com sucesso!", token })
-		}).catch(err => {
-			console.log('Erro aqui')
-			if (err.code === 11000) { // Duplicate key
-				return res.status(400).json({ err, msg: "E-mail já cadastrado" })
-			}
-			res.status(500).json({ err, msg: "Ocorreu um erro ao se cadastrar" })
-		})
-
-	}).catch(err => {
-		console.log('Erro na lista')
-		res.status(500).json({ err, msg: "Ocorreu um erro ao se cadastrar" })
-	})
+	try {
+		let user = new User(userObj)
+		user = await user.save()
+		const token = jwt.sign({ data: { id: user.id, name: user.name, email: user.email, group: user.group, list: user.list } }, process.env.SECRET, { expiresIn: '48h' })
+		res.json({ msg: "Cadastro realizado com sucesso!", token })
+	} catch (error) {
+		await List.findOneAndDelete({ _id: userObj.list })
+		if (error.code === 11000) { // Duplicate key
+			error = new BadRequestError("E-mail já cadastrado")
+			return next(error)
+		}
+		error = new UnhandledError("Ocorreu um erro ao se cadastrar")
+		return next(error)
+	}
 })
 
 module.exports = router

@@ -1,65 +1,64 @@
 const express = require('express')
 const bcrypt = require('bcryptjs')
 const User = require('../models/User')
+const { UnhandledError, NotFoundError } = require('../errors/api')
+const { APIError } = require('../errors/base')
 const router = express.Router()
 
-router.get('/', (req, res) => {
-	User.find().then(users => {
-		res.json(users)
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao listar usuários" })
-	})
+router.get('/', async (req, res, next) => {
+	try {
+		result = await User.find({}, { password: 0 })
+		res.json(result)
+	} catch (error) {
+		error = new UnhandledError("Ocorreu um erro ao listar usuários")
+		return next(error)
+	}
 })
 
-router.get('/:id', (req, res) => {
-	const _id = req.params.id
-	User.findById(_id).then(user => {
-		if (!user)
-			return res.status(404).json({ msg: "Usuário não encontrado" })
-
-		res.json(user)
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao buscar o usuário" })
-	})
+router.get('/:id', async (req, res, next) => {
+	try {
+		const id = req.params.id
+		const result = await User.findById(id, { password: 0 }).populate('group').populate('list')
+		if (!result)
+			throw new NotFoundError("Usuário não encontrado")
+		res.json(result)
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao buscar o usuário")
+		return next(error)
+	}
 })
 
-router.post('/', (req, res) => {
-	const userObj = req.body
-	const salt = bcrypt.genSaltSync(10)
-	userObj.password = bcrypt.hashSync(userObj.password, salt)
-
-	const user = new User(userObj)
-	user.save().then(user => {
-		res.json({ user, msg: "Usuário salvo com sucesso!" })
-	}).catch(err => {
-		if (err.code === 11000) { // Duplicate key
-			return res.status(400).json({ err, msg: "E-mail já cadastrado" })
-		}
-		res.status(500).json({ err, msg: "Ocorreu um erro ao cadastrar o usuário" })
-	})
+router.delete('/:id', async (req, res, next) => {
+	try {
+		const id = req.params.id
+		const result = await User.findOneAndDelete({ _id: id })
+		if (!result)
+			throw new NotFoundError("Usuário não encontrado")
+		res.json({ result, msg: "Usuário deletado com sucesso!" })
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao deletar o usuário")
+		return next(error)
+	}
 })
 
-router.delete('/:id', (req, res) => {
-	const _id = req.params.id
-	User.findOneAndDelete({ _id }).then(user => {
-		if (!user)
-			return res.status(404).json({ msg: "Usuário não encontrado" })
-		res.json({ user, msg: "Usuário deletado com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao deletar o usuário" })
-	})
-})
-
-router.patch('/:id', (req, res) => {
-	const _id = req.params.id
-	req.body.updatedAt = Date.now()
-	User.findOneAndUpdate({ _id }, req.body).then(user => {
-		if (!user)
-			return res.status(404).json({ msg: "Usuário não encontrado" })
-		res.json({ user, msg: "Usuário editado com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao editar o usuário" })
-	})
+router.patch('/:id', async (req, res, next) => {
+	try {
+		const id = req.params.id
+		req.body.updatedAt = Date.now()
+		const result = await User.findOneAndUpdate({ _id: id }, req.body)
+		if (!result)
+			throw new NotFoundError("Usuário não encontrado")
+		res.json({ result, msg: "Usuário editado com sucesso!" })
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao editar o usuário")
+		return next(error)
+	}
 })
 
 module.exports = router

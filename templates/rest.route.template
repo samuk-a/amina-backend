@@ -3,73 +3,91 @@ const express = require('express')
 const slugify = require('slugify')
 {{/if}}
 const {{modelName}} = require('../models/{{modelName}}')
+const { UnhandledError, NotFoundError } = require('../errors/api')
+const { APIError } = require('../errors/base')
 const router = express.Router()
 
-router.get('/', (req, res) => {
-	{{modelName}}.find().then(result => {
+router.get('/', async (req, res, next) => {
+	try {
+		result = await {{modelName}}.find()
 		res.json(result)
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao listar {{toLowerCase modelNameLocale}}s" })
-	})
+	} catch (error) {
+		error = new UnhandledError("Ocorreu um erro ao listar {{toLowerCase modelNameLocale}}s")
+		return next(error)
+	}
 })
 
 {{#if hasSlug}}
-router.get('/:slug', (req, res) => {
-	const slug = req.params.slug
-	{{modelName}}.findOne({ slug }).then(result => {
+router.get('/:slug', async (req, res, next) => {
+	try {
+		const slug = req.params.slug
+		const result = await {{modelName}}.findOne({ slug })
 		if (!result)
-			return res.status(404).json({ msg: "{{modelNameLocale}} não encontrado" })
+			throw new NotFoundError("{{modelNameLocale}} não encontrado")
 		res.json(result)
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao resgatar o {{toLowerCase modelNameLocale}}" })
-	})
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao buscar o {{toLowerCase modelNameLocale}}")
+		return next(error)
+	}
 })
 
 {{/if}}
 router.post('/', (req, res) => {
-	const obj = req.body
-	{{#if hasSlug}}
-	obj.slug = slugify(obj.name, {
-		strict: true,
-		lower: true
-	})
-	{{/if}}
-	const {{toLowerCase modelName}} = new {{modelName}}(obj)
-	{{toLowerCase modelName}}.save().then(result => {
-		res.json({ result, msg: "{{modelNameLocale}} salvo com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao salvar o {{toLowerCase modelNameLocale}}" })
-	})
-})
-
-router.delete('/:id', (req, res) => {
-	const id = req.params.id
-	{{modelName}}.findOneAndDelete({ _id: id }).then(result => {
-		if (!result)
-			return res.status(404).json({ msg: "{{modelNameLocale}} não encontrado" })
-		res.json({ result, msg: "{{modelNameLocale}} deletado com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao deletar o {{toLowerCase modelNameLocale}}" })
-	})
-})
-
-router.patch('/:id', (req, res) => {
-	const _id = req.params.id
-	{{#if hasSlug}}
-	if (!req.body.slug && req.body.name)
-		req.body.slug = slugify(req.body.name, {
+	try {
+		const obj = req.body
+		{{#if hasSlug}}
+		obj.slug = slugify(obj.name, {
 			strict: true,
 			lower: true
 		})
-	{{/if}}
-	req.body.updatedAt = Date.now()
-	{{modelName}}.findOneAndUpdate({ _id }, req.body).then(result => {
+		{{/if}}
+		const {{toLowerCase modelName}} = new {{modelName}}(obj)
+		const result = await {{toLowerCase modelName}}.save()
+		res.json({ result, msg: "{{modelNameLocale}} salvo com sucesso!" })
+	} catch (error) {
+		error = new UnhandledError("Ocorreu um erro ao salvar o {{toLowerCase modelNameLocale}}")
+		return next(error)
+	}
+})
+
+router.delete('/:id', (req, res) => {
+	try {
+		const id = req.params.id
+		const result = await {{modelName}}.findOneAndDelete({ _id: id })
 		if (!result)
-			return res.status(404).json({ msg: "{{modelNameLocale}} não encontrado" })
+			throw new NotFoundError("{{modelNameLocale}} não encontrado")
+		res.json({ result, msg: "{{modelNameLocale}} deletado com sucesso!" })
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao deletar o {{toLowerCase modelNameLocale}}")
+		return next(error)
+	}
+})
+
+router.patch('/:id', (req, res) => {
+	try {
+		const id = req.params.id
+		{{#if hasSlug}}
+		if (!req.body.slug && req.body.name)
+			req.body.slug = slugify(req.body.name, {
+				strict: true,
+				lower: true
+			})
+		{{/if}}
+		req.body.updatedAt = Date.now()
+		const result = await {{modelName}}.findOneAndUpdate({ _id: id }, req.body)
+		if (!result)
+			throw new NotFoundError("{{modelNameLocale}} não encontrado")
 		res.json({ result, msg: "{{modelNameLocale}} editado com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao editar o {{toLowerCase modelNameLocale}}" })
-	})
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao editar o {{toLowerCase modelNameLocale}}")
+		return next(error)
+	}
 })
 
 module.exports = router

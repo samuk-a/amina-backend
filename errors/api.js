@@ -28,7 +28,37 @@ class UnauthorizedError extends UserError {
 	}
 }
 
+class UnhandledError extends UserError {
+	constructor(message, options = {}) {
+		super(message)
+
+		for (const [key, val] of Object.entries(options)) {
+			this[key] = val
+		}
+	}
+
+	get statusCode() {
+		return 500
+	}
+}
+
+class NotFoundError extends UserError {
+	constructor(message, options = {}) {
+		super(message)
+
+		for (const [key, val] of Object.entries(options)) {
+			this[key] = val
+		}
+	}
+
+	get statusCode() {
+		return 404
+	}
+}
+
 module.exports = {
 	BadRequestError,
-	UnauthorizedError
+	UnauthorizedError,
+	UnhandledError,
+	NotFoundError
 }

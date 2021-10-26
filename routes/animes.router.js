@@ -2,67 +2,85 @@ const express = require('express')
 const slugify = require('slugify')
 const Anime = require('../models/Anime')
 const Auth = require('../middlewares/Auth')
+const { UnhandledError, NotFoundError } = require('../errors/api')
+const { APIError } = require('../errors/base')
 const router = express.Router()
 
-router.get('/', (req, res) => {
-	Anime.find().then(result => {
+router.get('/', async (req, res, next) => {
+	try {
+		result = await Anime.find()
 		res.json(result)
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao listar animes" })
-	})
+	} catch (error) {
+		error = new UnhandledError("Ocorreu um erro ao listar animes")
+		return next(error)
+	}
 })
 
-router.post('/', Auth, (req, res) => {
-	const animeObj = req.body
-	animeObj.slug = slugify(animeObj.title, {
-		strict: true,
-		lower: true
-	})
-	const anime = new Anime(animeObj)
-	anime.save().then(result => {
-		res.json({ result, msg: "Anime salvo com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao salvar o anime" })
-	})
-})
-
-router.delete('/:id', Auth, (req, res) => {
-	const id = req.params.id
-	Anime.findOneAndDelete({ _id: id }).then(result => {
-		if (!result)
-			return res.status(404).json({ msg: "Anime não encontrado" })
-		res.json({ result, msg: "Anime deletado com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao deletar o anime" })
-	})
-})
-
-router.get('/:slug', (req, res) => {
-	const slug = req.params.slug
-	Anime.findOne({ slug: slug }).then(result => {
-		if (!result)
-			return res.status(404).json({ msg: "Anime não encontrado" })
-		res.json(result)
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao buscar o anime" })
-	})
-})
-
-router.patch('/:id', Auth, (req, res) => {
-	const _id = req.params.id
-	if (!req.body.slug && req.body.title)
-		req.body.slug = slugify(req.body.title, {
+router.post('/', Auth, async (req, res, next) => {
+	try {
+		const animeObj = req.body
+		animeObj.slug = slugify(animeObj.title, {
 			strict: true,
 			lower: true
 		})
-	req.body.updatedAt = Date.now()
-	Anime.findOneAndUpdate({ _id }, req.body).then(result => {
+		const anime = new Anime(animeObj)
+		const result = await anime.save()
+		res.json({ result, msg: "Anime salvo com sucesso!" })
+	} catch (error) {
+		error = new UnhandledError("Ocorreu um erro ao salvar o anime")
+		return next(error)
+	}
+})
+
+router.delete('/:id', Auth, async (req, res, next) => {
+	try {
+		const id = req.params.id
+		const result = await Anime.findOneAndDelete({ _id: id })
 		if (!result)
-			return res.status(404).json({ msg: "Anime não encontrado" })
+			throw new NotFoundError("Anime não encontrado")
+		res.json({ result, msg: "Anime deletado com sucesso!" })
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao deletar o anime")
+		return next(error)
+	}
+})
+
+router.get('/:slug', async (req, res, next) => {
+	try {
+		const slug = req.params.slug
+		const result = await Anime.findOne({ slug: slug })
+		if (!result)
+			throw new NotFoundError("Anime não encontrado")
+		res.json(result)
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao buscar o anime")
+		return next(error)
+	}
+})
+
+router.patch('/:id', Auth, async (req, res, next) => {
+	try {
+		const id = req.params.id
+		if (!req.body.slug && req.body.title)
+			req.body.slug = slugify(req.body.title, {
+				strict: true,
+				lower: true
+			})
+		req.body.updatedAt = Date.now()
+		const result = await Anime.findOneAndUpdate({ _id: id }, req.body)
+		if (!result)
+			throw new NotFoundError("Anime não encontrado")
 		res.json({ result, msg: "Anime editado com sucesso!" })
-	}).catch(err => {
-		res.status(500).json({ err, msg: "Ocorreu um erro ao editar o anime" })
-	})
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao editar o anime")
+		return next(error)
+	}
 })
 
 module.exports = router
