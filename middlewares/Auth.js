@@ -9,6 +9,7 @@ module.exports = (req, res, next) => {
 	jwt.verify(token, process.env.SECRET, (err, data) => {
 		if (err)
 			return res.status(403).json({ msg: "Token inválido!" })
+		req.token = data.data
 		next();
 	})
 }

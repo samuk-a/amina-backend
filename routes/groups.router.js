@@ -24,7 +24,7 @@ router.get('/:slug', (req, res) => {
 
 router.post('/', (req, res) => {
 	const obj = req.body
-	obj.slug = slugify(obj.title, {
+	obj.slug = slugify(obj.name, {
 		strict: true,
 		lower: true
 	})
@@ -50,7 +50,7 @@ router.delete('/:id', (req, res) => {
 router.patch('/:id', (req, res) => {
 	const _id = req.params.id
 	if (!req.body.slug && req.body.title)
-		req.body.slug = slugify(req.body.title, {
+		req.body.slug = slugify(req.body.name, {
 			strict: true,
 			lower: true
 		})

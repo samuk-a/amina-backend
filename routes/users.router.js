@@ -13,9 +13,10 @@ router.get('/', (req, res) => {
 
 router.get('/:id', (req, res) => {
 	const _id = req.params.id
-	User.findOne({ _id }).then(user => {
+	User.findById(_id).then(user => {
 		if (!user)
 			return res.status(404).json({ msg: "Usuário não encontrado" })
+
 		res.json(user)
 	}).catch(err => {
 		res.status(500).json({ err, msg: "Ocorreu um erro ao buscar o usuário" })

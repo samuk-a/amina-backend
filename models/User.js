@@ -15,7 +15,14 @@ const schema = new mongoose.Schema({
 		required: true
 	},
 	group: {
-		type: String,
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'Group',
+		required: true,
+		default: "616efdb9608d429f48526eeb"
+	},
+	list: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'List',
 		required: true
 	},
 	createdAt: {

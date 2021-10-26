@@ -8,7 +8,7 @@ const schema = new mongoose.Schema({
 	permissions: {
 		type: Object,
 		default: {
-			general: ["noAds"],
+			general: [],
 			anime: ["list", "viewDetails", "addToList"],
 			episode: ["list", "watch"],
 			personal: ["view", "edit"]
