@@ -7,9 +7,14 @@ const router = express.Router()
 
 router.get('/', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.groups?.includes('list')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		result = await Group.find()
 		res.json(result)
 	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
 		error = new UnhandledError("Ocorreu um erro ao listar grupos")
 		return next(error)
 	}
@@ -17,6 +22,9 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:slug', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.groups?.includes('list')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const slug = req.params.slug
 		const result = await Group.findOne({ slug })
 		if (!result)
@@ -32,6 +40,9 @@ router.get('/:slug', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.groups?.includes('add')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const obj = req.body
 		obj.slug = slugify(obj.name, {
 			strict: true,
@@ -41,6 +52,8 @@ router.post('/', async (req, res, next) => {
 		const result = await group.save()
 		res.json({ result, msg: "Grupo salvo com sucesso!" })
 	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
 		error = new UnhandledError("Ocorreu um erro ao salvar o grupo")
 		return next(error)
 	}
@@ -48,6 +61,9 @@ router.post('/', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.groups?.includes('delete')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.params.id
 		const result = await Group.findOneAndDelete({ _id: id })
 		if (!result)
@@ -63,6 +79,9 @@ router.delete('/:id', async (req, res, next) => {
 
 router.patch('/:id', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.groups?.includes('edit')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.params.id
 		if (!req.body.slug && req.body.name)
 			req.body.slug = slugify(req.body.name, {

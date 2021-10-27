@@ -9,6 +9,7 @@ const episodesRouter = require('./episodes.router')
 const listsRouter = require('./lists.router')
 const User = require('../models/User')
 const List = require('../models/List')
+const Group = require('../models/Group')
 const Auth = require('../middlewares/Auth')
 const { UnauthorizedError, UnhandledError, BadRequestError } = require('../errors/api')
 
@@ -28,7 +29,8 @@ router.post('/login', async (req, res, next) => {
 		let compare = await bcrypt.compare(password, user.password)
 		if (!user || !compare)
 			throw new UnauthorizedError("Email e/ou senha não coincidem")
-		const token = jwt.sign({ data: { id: user.id, name: user.name, email, group: user.group, list: user.list } }, process.env.SECRET, { expiresIn: '48h' })
+		const permissions = await Group.findById(user.group)
+		const token = jwt.sign({ data: { id: user.id, name: user.name, email, group: user.group, list: user.list, permissions: permissions.permissions } }, process.env.SECRET, { expiresIn: '48h' })
 		res.json({ msg: "Logado com sucesso!", token })
 	} catch (error) {
 		return next(error)
@@ -52,7 +54,8 @@ router.post('/signup', async (req, res, next) => {
 	try {
 		let user = new User(userObj)
 		user = await user.save()
-		const token = jwt.sign({ data: { id: user.id, name: user.name, email: user.email, group: user.group, list: user.list } }, process.env.SECRET, { expiresIn: '48h' })
+		const permissions = await Group.findById(user.group)
+		const token = jwt.sign({ data: { id: user.id, name: user.name, email: user.email, group: user.group, list: user.list, permissions: permissions.permissions } }, process.env.SECRET, { expiresIn: '48h' })
 		res.json({ msg: "Cadastro realizado com sucesso!", token })
 	} catch (error) {
 		await List.findOneAndDelete({ _id: userObj.list })

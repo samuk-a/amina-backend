@@ -2,6 +2,7 @@ require('./lib/db')
 const express = require('express')
 const router = require('./routes/router')
 const cors = require('cors')
+const socket = require('socket.io')
 const { APIError } = require('./errors/base')
 const { UnhandledError } = require('./errors/api')
 
@@ -26,10 +27,19 @@ app.use((err, req, res, next) => {
 	}
 })
 
-app.listen(PORT, err => {
+const server = app.listen(PORT, err => {
 	if (err) {
 		console.log(`Ocorreu um erro: ${err}`);
 	} else {
 		console.log(`Servidor iniciado na porta ${PORT}`);
 	}
 })
+
+const io = socket(server);
+io.on("connection", socket => {
+	console.log("Made socket connection");
+
+	socket.on("disconnect", () => {
+		console.log(socket)
+	})
+});

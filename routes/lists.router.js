@@ -6,6 +6,9 @@ const router = express.Router()
 
 router.get('/', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.personal?.includes('view')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		result = await List.findOne({ _id: req.token.list })
 		res.json(result)
 	} catch (error) {
@@ -28,6 +31,9 @@ router.post('/', async (req, res, next) => {
 
 router.post('/anime', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.anime?.includes('addToList')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.token.list
 		if (!req.body.anime)
 			throw new BadRequestError("Anime não definido")
@@ -46,6 +52,9 @@ router.post('/anime', async (req, res, next) => {
 
 router.delete('/anime', async (req, res, next) => {
 	try {
+		if (!req.token.permissions.anime?.includes('addToList')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.token.list
 		if (!req.body.anime)
 			throw new BadRequestError("Anime não definido")

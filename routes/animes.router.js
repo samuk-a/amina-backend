@@ -2,7 +2,7 @@ const express = require('express')
 const slugify = require('slugify')
 const Anime = require('../models/Anime')
 const Auth = require('../middlewares/Auth')
-const { UnhandledError, NotFoundError } = require('../errors/api')
+const { UnhandledError, NotFoundError, UnauthorizedError } = require('../errors/api')
 const { APIError } = require('../errors/base')
 const router = express.Router()
 
@@ -11,6 +11,8 @@ router.get('/', async (req, res, next) => {
 		result = await Anime.find()
 		res.json(result)
 	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
 		error = new UnhandledError("Ocorreu um erro ao listar animes")
 		return next(error)
 	}
@@ -18,6 +20,9 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', Auth, async (req, res, next) => {
 	try {
+		if (!req.token.permissions.anime?.includes('add')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const animeObj = req.body
 		animeObj.slug = slugify(animeObj.title, {
 			strict: true,
@@ -27,6 +32,8 @@ router.post('/', Auth, async (req, res, next) => {
 		const result = await anime.save()
 		res.json({ result, msg: "Anime salvo com sucesso!" })
 	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
 		error = new UnhandledError("Ocorreu um erro ao salvar o anime")
 		return next(error)
 	}
@@ -34,6 +41,9 @@ router.post('/', Auth, async (req, res, next) => {
 
 router.delete('/:id', Auth, async (req, res, next) => {
 	try {
+		if (!req.token.permissions.anime?.includes('delete')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.params.id
 		const result = await Anime.findOneAndDelete({ _id: id })
 		if (!result)
@@ -64,6 +74,9 @@ router.get('/:slug', async (req, res, next) => {
 
 router.patch('/:id', Auth, async (req, res, next) => {
 	try {
+		if (!req.token.permissions.anime?.includes('edit')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.params.id
 		if (!req.body.slug && req.body.title)
 			req.body.slug = slugify(req.body.title, {

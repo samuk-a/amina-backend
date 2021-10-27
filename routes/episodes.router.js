@@ -11,6 +11,8 @@ router.get('/', async (req, res, next) => {
 		result = await Episode.find()
 		res.json(result)
 	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
 		error = new UnhandledError("Ocorreu um erro ao listar episódios")
 		return next(error)
 	}
@@ -96,6 +98,9 @@ router.get('/:anime/:slug', async (req, res, next) => {
 
 router.post('/', Auth, async (req, res, next) => {
 	try {
+		if (!req.token.permissions.episode?.includes('add')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const obj = req.body
 		if (!obj.slug)
 			obj.slug = slugify(obj.title, {
@@ -106,6 +111,8 @@ router.post('/', Auth, async (req, res, next) => {
 		const result = await episode.save()
 		res.json({ result, msg: "Episódio salvo com sucesso!" })
 	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
 		error = new UnhandledError("Ocorreu um erro ao salvar o episódio")
 		return next(error)
 	}
@@ -113,6 +120,9 @@ router.post('/', Auth, async (req, res, next) => {
 
 router.delete('/:id', Auth, async (req, res, next) => {
 	try {
+		if (!req.token.permissions.episode?.includes('delete')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.params.id
 		const result = await Episode.findOneAndDelete({ _id: id })
 		if (!result)
@@ -128,6 +138,9 @@ router.delete('/:id', Auth, async (req, res, next) => {
 
 router.patch('/:id', Auth, async (req, res, next) => {
 	try {
+		if (!req.token.permissions.episode?.includes('edit')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
 		const id = req.params.id
 		if (!req.body.slug && req.body.title)
 			req.body.slug = slugify(req.body.title, {
