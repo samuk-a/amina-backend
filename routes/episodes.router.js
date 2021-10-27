@@ -1,6 +1,7 @@
 const express = require('express')
 const slugify = require('slugify')
 const Episode = require('../models/Episode')
+const History = require('../models/EpisodeHistory')
 const Auth = require('../middlewares/Auth')
 const { UnhandledError, NotFoundError } = require('../errors/api')
 const { APIError } = require('../errors/base')
@@ -156,6 +157,34 @@ router.patch('/:id', Auth, async (req, res, next) => {
 		if (error instanceof APIError)
 			return next(error)
 		error = new UnhandledError("Ocorreu um erro ao editar o episódio")
+		return next(error)
+	}
+})
+
+router.post('/:id/history', Auth, async (req, res, next) => {
+	try {
+		if (!req.token.permissions.episode?.includes('watch')) {
+			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
+		}
+		const episodeId = req.params.id
+		const userId = req.token.id
+
+		const payload = {
+			episode: episodeId,
+			user: userId,
+			watchedSeconds: req.body.watchedSeconds,
+			totalSeconds: req.body.totalSeconds,
+			updatedAt: Date.now()
+		}
+
+		const result = await History.findOneAndUpdate({ _id: id }, payload)
+		if (!result)
+			throw new NotFoundError("Episódio não encontrado")
+		res.json({ result, msg: "Progresso salvo com sucesso!" })
+	} catch (error) {
+		if (error instanceof APIError)
+			return next(error)
+		error = new UnhandledError("Ocorreu um erro ao salvar o progresso", { err: error })
 		return next(error)
 	}
 })
