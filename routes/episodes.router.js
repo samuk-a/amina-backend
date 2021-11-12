@@ -8,9 +8,51 @@ const { APIError } = require('../errors/base')
 const router = express.Router()
 
 router.get('/', async (req, res, next) => {
+	let page = Math.max(1, req.query.page || 0)
+	const items = Math.max(1, req.query.itemsPerPage || 30)
 	try {
-		result = await Episode.find()
-		res.json(result)
+		const totalResults = await Episode.count()
+		const totalPages = Math.ceil(totalResults / items)
+		page = Math.min(page, totalPages)
+
+		const result = await Episode.aggregate([
+			{
+				$lookup: {
+					from: 'animes',
+					localField: 'anime',
+					foreignField: '_id',
+					as: 'anime'
+				}
+			},
+			{
+				$unwind: {
+					path: '$anime',
+					preserveNullAndEmptyArrays: false
+				}
+			},
+			{
+				$project: {
+					title: 1,
+					cover: 1,
+					episodeNumber: 1,
+					seasonNumber: 1,
+					slug: 1,
+					anime: {
+						title: 1,
+						slug: 1
+					}
+				}
+			}
+		]).skip((page - 1) * items).limit(items)
+
+		res.json({
+			result,
+			pagination: {
+				curPage: page,
+				nextPage: page < totalPages ? page + 1 : null,
+				totalPages
+			}
+		})
 	} catch (error) {
 		if (error instanceof APIError)
 			return next(error)
@@ -20,7 +62,21 @@ router.get('/', async (req, res, next) => {
 })
 
 router.get('/:anime', async (req, res, next) => {
+	let page = Math.max(1, req.query.page || 0)
+	const items = Math.max(1, req.query.itemsPerPage || 30)
 	try {
+		let totalResults = await Episode.aggregate([
+			{
+				$count: 'total'
+			}
+		])
+		totalResults = totalResults[0].total
+		if (totalResults == 0)
+			throw new NotFoundError("Este anime não possui episódios")
+
+		const totalPages = Math.ceil(totalResults / items)
+		page = Math.min(page, totalPages)
+
 		const anime = req.params.anime
 		const pipeline = [
 			{
@@ -40,12 +96,19 @@ router.get('/:anime', async (req, res, next) => {
 				$project: {
 					anime: 0
 				}
-			}
+			},
+			{ $skip: (page - 1) * items },
+			{ $limit: items }
 		]
 		const result = await Episode.aggregate(pipeline)
-		if (result.length == 0)
-			throw new NotFoundError("Este anime não possui episódios")
-		res.json(result)
+		res.json({
+			result,
+			pagination: {
+				curPage: page,
+				nextPage: page < totalPages ? page + 1 : null,
+				totalPages
+			}
+		})
 	} catch (error) {
 		if (error instanceof APIError)
 			return next(error)
@@ -168,18 +231,26 @@ router.post('/:id/history', Auth, async (req, res, next) => {
 		}
 		const episodeId = req.params.id
 		const userId = req.token.id
+		const id = {
+			episode: episodeId,
+			user: userId
+		}
+		const episode = await Episode.findById(episodeId)
+		if (!episode)
+			throw new NotFoundError("Episódio não encontrado")
 
 		const payload = {
-			episode: episodeId,
-			user: userId,
+			_id: id,
 			watchedSeconds: req.body.watchedSeconds,
 			totalSeconds: req.body.totalSeconds,
 			updatedAt: Date.now()
 		}
 
-		const result = await History.findOneAndUpdate({ _id: id }, payload)
-		if (!result)
-			throw new NotFoundError("Episódio não encontrado")
+		let result = await History.findOneAndUpdate({ _id: id }, payload)
+		if (!result) {
+			const history = new History(payload)
+			result = await history.save()
+		}
 		res.json({ result, msg: "Progresso salvo com sucesso!" })
 	} catch (error) {
 		if (error instanceof APIError)

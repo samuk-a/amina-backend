@@ -1,6 +1,9 @@
 const mongoose = require('mongoose')
 
-const schema = new mongoose.Schema({
+const idSchema = new mongoose.Schema({
+	_id: {
+		required: false
+	},
 	episode: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'Episode',
@@ -10,6 +13,12 @@ const schema = new mongoose.Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'User',
 		required: true
+	}
+})
+
+const schema = new mongoose.Schema({
+	_id: {
+		type: idSchema
 	},
 	watchedSeconds: {
 		type: Number,
@@ -27,6 +36,6 @@ const schema = new mongoose.Schema({
 		type: Date,
 		default: Date.now()
 	}
-})
+}, { collection: 'episodeHistory' })
 
 module.exports = mongoose.model('EpisodeHistory', schema)

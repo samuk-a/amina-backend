@@ -6,12 +6,26 @@ const { APIError } = require('../errors/base')
 const router = express.Router()
 
 router.get('/', async (req, res, next) => {
+	let page = Math.max(1, req.query.page || 0)
+	const items = Math.max(1, req.query.itemsPerPage || 30)
 	try {
 		if (!req.token.permissions.users?.includes('list')) {
 			throw new UnauthorizedError("Você não tem permissão para acessar essa página")
 		}
-		result = await User.find({}, { password: 0 })
-		res.json(result)
+
+		const totalResults = await User.count()
+		const totalPages = Math.ceil(totalResults / items)
+		page = Math.min(page, totalPages)
+
+		result = await User.find({}, { password: 0, __v: 0 }).skip((page - 1) * items).limit(items)
+		res.json({
+			result,
+			pagination: {
+				curPage: page,
+				nextPage: page < totalPages ? page + 1 : null,
+				totalPages
+			}
+		})
 	} catch (error) {
 		error = new UnhandledError("Ocorreu um erro ao listar usuários")
 		return next(error)
